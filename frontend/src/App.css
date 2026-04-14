@@ -1,104 +1,117 @@
-/* Status badge animations */
-@keyframes pulse-processing {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-@keyframes status-enter {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes glow-indigo {
-  0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.15); }
-  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.35); }
-}
-
-.animate-pulse-processing {
-  animation: pulse-processing 1.5s ease-in-out infinite;
-}
-
-.animate-status-enter {
-  animation: status-enter 0.3s ease-out forwards;
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.4s ease-out forwards;
-}
-
-.animate-glow {
-  animation: glow-indigo 2s ease-in-out infinite;
-}
-
-/* Row entrance animation */
-.action-row-enter {
-  animation: fade-in-up 0.3s ease-out forwards;
-}
-
-/* Stagger delays for cards */
-.stagger-1 { animation-delay: 0ms; }
-.stagger-2 { animation-delay: 80ms; }
-.stagger-3 { animation-delay: 160ms; }
-.stagger-4 { animation-delay: 240ms; }
-
-/* Mono font for data */
 .font-mono-data {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
-/* Ticker cell styling */
-.ticker-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+.font-heading {
+  font-family: 'Satoshi', 'IBM Plex Sans', sans-serif;
 }
 
-/* Glass effect for nav */
-.glass-nav {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* Tab underline animation */
+.tab-btn {
+  position: relative;
+  transition: color 0.2s ease;
+}
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.tab-btn.active::after {
+  background: #002FA7;
 }
 
-/* Table row hover glow */
-.table-row-hover:hover {
-  background: rgba(30, 41, 59, 0.6);
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
-/* Process button shimmer on hover */
-.btn-process:hover:not(:disabled) {
-  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s linear infinite;
+/* Stagger */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 60ms; }
+.stagger-3 { animation-delay: 120ms; }
+.stagger-4 { animation-delay: 180ms; }
+.stagger-5 { animation-delay: 240ms; }
+
+/* Pipeline connector */
+.pipeline-step {
+  position: relative;
+}
+.pipeline-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 2px;
+  height: 60%;
+  transform: translateY(-50%);
+  background: #E5E5E5;
 }
 
-/* Card hover lift */
-.metric-card {
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+/* Timeline dot */
+.tl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
 }
-.metric-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+.tl-dot-green { background: #046A38; }
+.tl-dot-blue { background: #002FA7; }
+.tl-dot-amber { background: #F5A623; }
+.tl-dot-red { background: #FF2400; }
+.tl-dot-gray { background: #9CA3AF; }
+
+/* Badge colors */
+.badge-pending { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+.badge-announced { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
+.badge-validated { background: #E0E7FF; color: #3730A3; border: 1px solid #A5B4FC; }
+.badge-instructed { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+.badge-settled { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
+.badge-exception { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
+
+.badge-dividend { background: #EDE9FE; color: #5B21B6; }
+.badge-split { background: #DBEAFE; color: #1E40AF; }
+.badge-merger { background: #FCE7F3; color: #9D174D; }
+.badge-rights { background: #FEF3C7; color: #92400E; }
+.badge-tender { background: #E0E7FF; color: #3730A3; }
+
+.badge-mandatory { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+.badge-voluntary { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+
+.badge-risk-high { background: #FEE2E2; color: #991B1B; }
+.badge-risk-medium { background: #FEF3C7; color: #92400E; }
+.badge-risk-low { background: #D1FAE5; color: #065F46; }
+
+.badge-cash { background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
+.badge-stock { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
+.badge-mixed { background: #E0E7FF; color: #3730A3; border: 1px solid #A5B4FC; }
+
+/* Chart bars */
+.chart-bar {
+  transition: height 0.5s ease;
+  border-radius: 2px 2px 0 0;
+}
+
+/* Election button */
+.election-btn {
+  transition: all 0.15s ease;
+}
+.election-btn.selected {
+  background: #002FA7;
+  color: white;
+  border-color: #002FA7;
+}
+
+/* Row hover */
+.data-row:hover {
+  background: #F9FAFB;
 }

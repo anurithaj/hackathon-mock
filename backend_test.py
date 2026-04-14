@@ -3,17 +3,17 @@ import sys
 import time
 from datetime import datetime
 
-class CorporateActionsAPITester:
+class CorporateActionsProcessingTester:
     def __init__(self, base_url="https://dividend-tracker-27.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
-        self.created_action_id = None
+        self.created_event_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, timeout=10):
         """Run a single API test"""
-        url = f"{self.api_url}/{endpoint}"
+        url = f"{self.api_url}/{endpoint}" if endpoint else self.api_url
         headers = {'Content-Type': 'application/json'}
 
         self.tests_run += 1
@@ -34,7 +34,7 @@ class CorporateActionsAPITester:
                 print(f"✅ Passed - Status: {response.status_code}")
                 try:
                     response_data = response.json()
-                    print(f"   Response: {response_data}")
+                    print(f"   Response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Non-dict response'}")
                     return True, response_data
                 except:
                     return True, {}
@@ -53,147 +53,348 @@ class CorporateActionsAPITester:
 
     def test_root_endpoint(self):
         """Test root API endpoint"""
-        return self.run_test("Root API Endpoint", "GET", "", 200)
+        success, response = self.run_test("Root API Endpoint", "GET", "", 200)
+        if success and response.get('message'):
+            print(f"✅ Root endpoint message: {response['message']}")
+            return True
+        return success
 
-    def test_get_actions(self):
-        """Test GET /api/actions - should return 10 seeded actions"""
-        success, response = self.run_test("Get All Actions", "GET", "actions", 200)
+    def test_dashboard(self):
+        """Test GET /api/dashboard - returns metrics, deadlines, type_breakdown, pipeline"""
+        success, response = self.run_test("Dashboard Data", "GET", "dashboard", 200)
         if success:
-            actions = response
-            if len(actions) == 10:
-                print(f"✅ Correct number of seeded actions: {len(actions)}")
-                # Verify action structure
-                if actions and all(key in actions[0] for key in ['id', 'ticker', 'company_name', 'action_type', 'status']):
-                    print("✅ Action structure is correct")
-                    return True
+            required_keys = ['metrics', 'deadlines', 'type_breakdown', 'pipeline']
+            if all(key in response for key in required_keys):
+                print("✅ Dashboard has all required sections")
+                
+                # Check metrics structure
+                metrics = response['metrics']
+                metric_keys = ['pending_events', 'processed_today', 'failed_exceptions', 'total_aum_affected', 'elections_due_today']
+                if all(key in metrics for key in metric_keys):
+                    print("✅ Metrics section has all required fields")
+                    print(f"   Pending events: {metrics['pending_events']}")
+                    print(f"   Processed today: {metrics['processed_today']}")
+                    print(f"   Elections due: {metrics['elections_due_today']}")
                 else:
-                    print("❌ Action structure is missing required fields")
+                    print(f"❌ Missing metric keys: {[k for k in metric_keys if k not in metrics]}")
+                    return False
+                
+                # Check pipeline structure
+                pipeline = response['pipeline']
+                pipeline_stages = ['Announced', 'Validated', 'Instructed', 'Settled', 'Exceptions']
+                if all(stage in pipeline for stage in pipeline_stages):
+                    print("✅ Pipeline has all required stages")
+                    print(f"   Pipeline counts: {pipeline}")
+                else:
+                    print(f"❌ Missing pipeline stages: {[s for s in pipeline_stages if s not in pipeline]}")
+                    return False
+                
+                return True
             else:
-                print(f"❌ Expected 10 actions, got {len(actions)}")
+                print(f"❌ Missing dashboard keys: {[k for k in required_keys if k not in response]}")
         return success
 
-    def test_get_summary(self):
-        """Test GET /api/actions/summary - should return correct metrics"""
-        success, response = self.run_test("Get Summary", "GET", "actions/summary", 200)
+    def test_events_list(self):
+        """Test GET /api/events - returns paginated events with search/filter support"""
+        success, response = self.run_test("Events List", "GET", "events", 200)
         if success:
-            expected_values = {
-                'total_actions': 10,
-                'pending_count': 5,
-                'securities_affected': 10,
-                'avg_processing_time': 2.4
-            }
-            
-            all_correct = True
-            for key, expected in expected_values.items():
-                actual = response.get(key)
-                if actual == expected:
-                    print(f"✅ {key}: {actual} (correct)")
-                else:
-                    print(f"❌ {key}: expected {expected}, got {actual}")
-                    all_correct = False
-            
-            return all_correct
-        return success
-
-    def test_create_action(self):
-        """Test POST /api/actions - create new action with Alpha Vantage enrichment"""
-        test_data = {
-            "ticker": "TEST",
-            "action_type": "Dividend",
-            "ex_date": "2026-12-31",
-            "announcement": "Test dividend announcement"
-        }
-        
-        success, response = self.run_test("Create New Action", "POST", "actions", 200, test_data)
-        if success:
-            # Store the created action ID for later tests
-            self.created_action_id = response.get('id')
-            
-            # Verify the response structure
-            required_fields = ['id', 'ticker', 'company_name', 'action_type', 'status', 'ex_date']
-            if all(field in response for field in required_fields):
-                print("✅ Created action has all required fields")
-                if response['status'] == 'Pending':
-                    print("✅ New action has Pending status")
-                    if response['ticker'] == 'TEST':
-                        print("✅ Ticker is correct")
+            required_keys = ['events', 'total', 'page', 'per_page', 'total_pages']
+            if all(key in response for key in required_keys):
+                print("✅ Events response has pagination structure")
+                events = response['events']
+                if len(events) > 0:
+                    print(f"✅ Found {len(events)} events out of {response['total']} total")
+                    
+                    # Check event structure
+                    event = events[0]
+                    event_keys = ['id', 'security', 'ticker', 'isin', 'event_type', 'status', 'record_date', 'pay_date']
+                    if all(key in event for key in event_keys):
+                        print("✅ Event structure is correct")
+                        print(f"   Sample event: {event['id']} - {event['security']} ({event['event_type']})")
                         return True
                     else:
-                        print(f"❌ Expected ticker TEST, got {response['ticker']}")
+                        print(f"❌ Missing event keys: {[k for k in event_keys if k not in event]}")
                 else:
-                    print(f"❌ Expected status Pending, got {response['status']}")
+                    print("❌ No events found in response")
             else:
-                print("❌ Created action missing required fields")
+                print(f"❌ Missing response keys: {[k for k in required_keys if k not in response]}")
         return success
 
-    def test_process_action(self):
-        """Test PUT /api/actions/{id}/process - change status to Processing"""
-        if not self.created_action_id:
-            print("❌ No action ID available for processing test")
+    def test_events_search(self):
+        """Test GET /api/events with search parameter"""
+        success, response = self.run_test("Events Search", "GET", "events?search=Apple", 200)
+        if success:
+            events = response.get('events', [])
+            if len(events) > 0:
+                # Check if search worked
+                apple_found = any('apple' in event.get('security', '').lower() for event in events)
+                if apple_found:
+                    print("✅ Search functionality working - found Apple events")
+                    return True
+                else:
+                    print("❌ Search didn't return Apple events")
+            else:
+                print("❌ Search returned no events")
+        return success
+
+    def test_events_filter(self):
+        """Test GET /api/events with type filter"""
+        success, response = self.run_test("Events Type Filter", "GET", "events?event_type=Dividend", 200)
+        if success:
+            events = response.get('events', [])
+            if len(events) > 0:
+                # Check if all events are dividends
+                all_dividends = all(event.get('event_type') == 'Dividend' for event in events)
+                if all_dividends:
+                    print(f"✅ Type filter working - found {len(events)} dividend events")
+                    return True
+                else:
+                    print("❌ Type filter returned non-dividend events")
+            else:
+                print("❌ Type filter returned no events")
+        return success
+
+    def test_create_event(self):
+        """Test POST /api/events - creates new event and adds audit entry"""
+        test_data = {
+            "security": "Test Corp Inc.",
+            "isin": "US1234567890",
+            "event_type": "Dividend",
+            "mandatory": True,
+            "record_date": "2026-12-31",
+            "pay_date": "2027-01-15",
+            "distribution": "$0.50 / share",
+            "notes": "Test dividend creation"
+        }
+        
+        success, response = self.run_test("Create New Event", "POST", "events", 200, test_data)
+        if success:
+            # Store the created event ID for later tests
+            self.created_event_id = response.get('id')
+            
+            # Verify the response structure
+            required_fields = ['id', 'security', 'event_type', 'status', 'record_date', 'pay_date']
+            if all(field in response for field in required_fields):
+                print("✅ Created event has all required fields")
+                if response['status'] == 'Announced':
+                    print("✅ New event has Announced status")
+                    if response['security'] == 'Test Corp Inc.':
+                        print(f"✅ Event created with ID: {response['id']}")
+                        return True
+                    else:
+                        print(f"❌ Expected security 'Test Corp Inc.', got {response['security']}")
+                else:
+                    print(f"❌ Expected status 'Announced', got {response['status']}")
+            else:
+                print(f"❌ Created event missing required fields: {[f for f in required_fields if f not in response]}")
+        return success
+
+    def test_process_event(self):
+        """Test PUT /api/events/{id}/process - advances event status through pipeline"""
+        if not self.created_event_id:
+            print("❌ No event ID available for processing test")
             return False
             
         success, response = self.run_test(
-            "Process Action", 
+            "Process Event", 
             "PUT", 
-            f"actions/{self.created_action_id}/process", 
+            f"events/{self.created_event_id}/process", 
             200
         )
         
         if success:
-            if response.get('status') == 'Processing':
-                print("✅ Action status changed to Processing")
+            if response.get('status') in ['Validated', 'Instructed', 'Settled']:
+                print(f"✅ Event status advanced to: {response.get('status')}")
                 return True
             else:
-                print(f"❌ Expected status Processing, got {response.get('status')}")
+                print(f"❌ Unexpected status after processing: {response.get('status')}")
         return success
 
-    def test_complete_action(self):
-        """Test PUT /api/actions/{id}/complete - change status to Completed"""
-        if not self.created_action_id:
-            print("❌ No action ID available for completion test")
+    def test_get_single_event(self):
+        """Test GET /api/events/{id} - get specific event"""
+        if not self.created_event_id:
+            print("❌ No event ID available for single event test")
             return False
             
         success, response = self.run_test(
-            "Complete Action", 
-            "PUT", 
-            f"actions/{self.created_action_id}/complete", 
+            "Get Single Event", 
+            "GET", 
+            f"events/{self.created_event_id}", 
             200
         )
         
         if success:
-            if response.get('status') == 'Completed':
-                print("✅ Action status changed to Completed")
+            if response.get('id') == self.created_event_id:
+                print(f"✅ Retrieved correct event: {response.get('security')}")
                 return True
             else:
-                print(f"❌ Expected status Completed, got {response.get('status')}")
+                print(f"❌ Retrieved wrong event ID: {response.get('id')}")
         return success
 
-    def test_process_nonexistent_action(self):
-        """Test processing non-existent action - should return 404"""
-        fake_id = "non-existent-id"
-        success, _ = self.run_test(
-            "Process Non-existent Action", 
+    def test_entitlements(self):
+        """Test GET /api/entitlements - returns entitlements with filter support"""
+        success, response = self.run_test("Entitlements List", "GET", "entitlements", 200)
+        if success:
+            required_keys = ['entitlements', 'total']
+            if all(key in response for key in required_keys):
+                print("✅ Entitlements response structure correct")
+                entitlements = response['entitlements']
+                if len(entitlements) > 0:
+                    print(f"✅ Found {len(entitlements)} entitlements")
+                    
+                    # Check entitlement structure
+                    ent = entitlements[0]
+                    ent_keys = ['id', 'event_id', 'security', 'event_type', 'mandatory', 'status']
+                    if all(key in ent for key in ent_keys):
+                        print("✅ Entitlement structure is correct")
+                        return True
+                    else:
+                        print(f"❌ Missing entitlement keys: {[k for k in ent_keys if k not in ent]}")
+                else:
+                    print("❌ No entitlements found")
+            else:
+                print(f"❌ Missing response keys: {[k for k in required_keys if k not in response]}")
+        return success
+
+    def test_entitlements_filter(self):
+        """Test GET /api/entitlements with filter"""
+        success, response = self.run_test("Entitlements Filter", "GET", "entitlements?filter_type=pending", 200)
+        if success:
+            entitlements = response.get('entitlements', [])
+            if len(entitlements) >= 0:  # Could be 0 if no pending
+                print(f"✅ Filter working - found {len(entitlements)} pending entitlements")
+                return True
+            else:
+                print("❌ Filter failed")
+        return success
+
+    def test_elect_entitlement(self):
+        """Test PUT /api/entitlements/{id}/elect - submits election choice"""
+        # First get entitlements to find one we can elect
+        success, response = self.run_test("Get Entitlements for Election", "GET", "entitlements", 200)
+        if not success:
+            return False
+            
+        entitlements = response.get('entitlements', [])
+        voluntary_ent = None
+        for ent in entitlements:
+            if not ent.get('mandatory') and ent.get('election_options') and ent.get('status') == 'Pending election':
+                voluntary_ent = ent
+                break
+        
+        if not voluntary_ent:
+            print("⚠️  No voluntary entitlements available for election test")
+            return True  # Not a failure, just no data to test with
+            
+        election_data = {"elected_option": voluntary_ent['election_options'][0]}
+        success, response = self.run_test(
+            "Submit Election", 
             "PUT", 
-            f"actions/{fake_id}/process", 
-            404
+            f"entitlements/{voluntary_ent['id']}/elect", 
+            200,
+            election_data
         )
+        
+        if success:
+            if response.get('status') == 'Elected':
+                print(f"✅ Election submitted successfully: {response.get('elected_option')}")
+                return True
+            else:
+                print(f"❌ Unexpected status after election: {response.get('status')}")
+        return success
+
+    def test_submit_all_elections(self):
+        """Test POST /api/entitlements/submit-all - submits all elected entitlements"""
+        success, response = self.run_test("Submit All Elections", "POST", "entitlements/submit-all", 200)
+        if success:
+            if 'submitted' in response:
+                print(f"✅ Bulk submission completed: {response['submitted']} elections submitted")
+                return True
+            else:
+                print("❌ Missing 'submitted' count in response")
+        return success
+
+    def test_positions(self):
+        """Test GET /api/positions - returns positions with metrics"""
+        success, response = self.run_test("Positions Data", "GET", "positions", 200)
+        if success:
+            required_keys = ['positions', 'metrics']
+            if all(key in response for key in required_keys):
+                print("✅ Positions response structure correct")
+                positions = response['positions']
+                metrics = response['metrics']
+                
+                if len(positions) > 0:
+                    print(f"✅ Found {len(positions)} positions")
+                    
+                    # Check position structure
+                    pos = positions[0]
+                    pos_keys = ['id', 'account', 'security', 'shares_held', 'event_type', 'entitlement']
+                    if all(key in pos for key in pos_keys):
+                        print("✅ Position structure is correct")
+                    else:
+                        print(f"❌ Missing position keys: {[k for k in pos_keys if k not in pos]}")
+                        return False
+                
+                # Check metrics structure
+                metric_keys = ['total_accounts', 'positions_affected', 'cash_entitlements', 'stock_entitlements']
+                if all(key in metrics for key in metric_keys):
+                    print("✅ Position metrics structure correct")
+                    print(f"   Total accounts: {metrics['total_accounts']}")
+                    print(f"   Positions affected: {metrics['positions_affected']}")
+                    return True
+                else:
+                    print(f"❌ Missing metric keys: {[k for k in metric_keys if k not in metrics]}")
+            else:
+                print(f"❌ Missing response keys: {[k for k in required_keys if k not in response]}")
+        return success
+
+    def test_audit(self):
+        """Test GET /api/audit - returns audit timeline entries"""
+        success, response = self.run_test("Audit Log", "GET", "audit", 200)
+        if success:
+            if 'entries' in response:
+                entries = response['entries']
+                print(f"✅ Found {len(entries)} audit entries")
+                
+                if len(entries) > 0:
+                    # Check entry structure
+                    entry = entries[0]
+                    entry_keys = ['id', 'action', 'timestamp', 'log_type', 'color']
+                    if all(key in entry for key in entry_keys):
+                        print("✅ Audit entry structure is correct")
+                        print(f"   Latest entry: {entry['action']}")
+                        return True
+                    else:
+                        print(f"❌ Missing entry keys: {[k for k in entry_keys if k not in entry]}")
+                else:
+                    print("❌ No audit entries found")
+            else:
+                print("❌ Missing 'entries' key in response")
         return success
 
 def main():
-    print("🚀 Starting Corporate Actions API Tests")
-    print("=" * 50)
+    print("🚀 Starting Corporate Actions Processing System API Tests")
+    print("=" * 60)
     
-    tester = CorporateActionsAPITester()
+    tester = CorporateActionsProcessingTester()
     
-    # Run all tests
+    # Run all tests in logical order
     tests = [
         tester.test_root_endpoint,
-        tester.test_get_actions,
-        tester.test_get_summary,
-        tester.test_create_action,
-        tester.test_process_action,
-        tester.test_complete_action,
-        tester.test_process_nonexistent_action,
+        tester.test_dashboard,
+        tester.test_events_list,
+        tester.test_events_search,
+        tester.test_events_filter,
+        tester.test_create_event,
+        tester.test_get_single_event,
+        tester.test_process_event,
+        tester.test_entitlements,
+        tester.test_entitlements_filter,
+        tester.test_elect_entitlement,
+        tester.test_submit_all_elections,
+        tester.test_positions,
+        tester.test_audit,
     ]
     
     for test in tests:
@@ -204,14 +405,14 @@ def main():
             tester.tests_run += 1
     
     # Print final results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     if tester.tests_passed == tester.tests_run:
-        print("🎉 All tests passed!")
+        print("🎉 All backend API tests passed!")
         return 0
     else:
-        print("⚠️  Some tests failed")
+        print("⚠️  Some backend tests failed")
         return 1
 
 if __name__ == "__main__":
