@@ -1,0 +1,110 @@
+{
+  "theme": "dark",
+  "archetype": "4",
+  "archetype_name": "Swiss & High-Contrast (Dark Mode Adapted)",
+  "design_philosophy": "Functional brutalism meets high-end fintech. Prioritizes data density, extreme contrast for legibility, and technical precision. Uses a 'Control Room' grid system where every pixel serves the data.",
+  "colors": {
+    "background": "#0f172a",
+    "surface": "#1e293b",
+    "surface_hover": "#334155",
+    "accent_primary": "#6366f1",
+    "accent_primary_hover": "#4f46e5",
+    "text_primary": "#f8fafc",
+    "text_secondary": "#94a3b8",
+    "border": "#334155",
+    "status": {
+      "pending": {
+        "text": "#fcd34d",
+        "bg": "rgba(245, 158, 11, 0.1)",
+        "border": "rgba(245, 158, 11, 0.2)"
+      },
+      "processing": {
+        "text": "#93c5fd",
+        "bg": "rgba(59, 130, 246, 0.1)",
+        "border": "rgba(59, 130, 246, 0.2)"
+      },
+      "completed": {
+        "text": "#6ee7b7",
+        "bg": "rgba(16, 185, 129, 0.1)",
+        "border": "rgba(16, 185, 129, 0.2)"
+      }
+    }
+  },
+  "typography": {
+    "heading_font": "Work Sans",
+    "body_font": "IBM Plex Sans",
+    "mono_font": "JetBrains Mono",
+    "scale": {
+      "h1": "text-3xl font-semibold tracking-tight",
+      "h2": "text-2xl font-medium tracking-tight",
+      "h3": "text-xl font-medium",
+      "body": "text-sm leading-relaxed",
+      "mono_data": "text-sm font-mono tracking-tight",
+      "label": "text-xs font-semibold uppercase tracking-widest"
+    }
+  },
+  "layout": {
+    "spacing_system": "Dense. p-4 to p-6 for internal card padding, gap-4 to gap-6 for grids.",
+    "page_structure": "Top navigation bar (glassmorphism over dark bg), followed by a 4-column metric card grid, followed by a full-width data table.",
+    "grid_classes": {
+      "metrics": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4",
+      "main": "flex flex-col gap-6 p-6 md:p-8 max-w-[1600px] mx-auto"
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "bg-[#1e293b] border border-slate-700/50 rounded-lg shadow-sm flex flex-col justify-between p-5",
+      "hover_state": "hover:border-slate-600 transition-colors duration-200"
+    },
+    "table": {
+      "style": "w-full text-left border-collapse",
+      "header": "bg-slate-900/50 text-xs uppercase tracking-widest text-slate-400 font-semibold border-y border-slate-700/50 py-3 px-4",
+      "row": "border-b border-slate-800 hover:bg-slate-800/50 transition-colors group",
+      "cell": "py-4 px-4 text-sm align-middle whitespace-nowrap text-slate-300",
+      "ticker_cell": "font-mono font-medium text-slate-100 bg-slate-800/80 px-2 py-1 rounded"
+    },
+    "buttons": {
+      "primary": "bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-md px-4 py-2 transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] flex items-center justify-center gap-2",
+      "action": "bg-transparent border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 hover:bg-slate-800 rounded px-3 py-1.5 text-xs transition-all font-medium",
+      "disabled": "opacity-50 cursor-not-allowed border-slate-700 text-slate-500 hover:bg-transparent hover:border-slate-700 hover:text-slate-500"
+    },
+    "badges": {
+      "base": "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border shadow-sm"
+    },
+    "side_panel": {
+      "wrapper": "fixed inset-y-0 right-0 w-full md:w-[450px] bg-[#0f172a] border-l border-slate-800 shadow-2xl z-50 transform transition-transform duration-300 flex flex-col",
+      "overlay": "fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+    },
+    "inputs": {
+      "base": "w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all",
+      "label": "block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5"
+    }
+  },
+  "motion": {
+    "status_animation": {
+      "duration": "3000ms",
+      "easing": "ease-in-out",
+      "description": "When 'Process' is clicked, badge changes to 'Processing' with a pulse animation. After 3 seconds, transitions to 'Completed'."
+    },
+    "micro_interactions": "Hover states on rows and buttons should have a 150ms-200ms ease transition."
+  },
+  "accessibility": {
+    "contrast": "Ensure text contrast against background meets minimum 4.5:1 WCAG AA standards. Form labels must be clearly associated with inputs.",
+    "testing": "All interactive elements must include a kebab-cased `data-testid` attribute."
+  },
+  "assets": {
+    "icons_library": "@phosphor-icons/react",
+    "images": []
+  },
+  "implementation_instructions": {
+    "1": "Install libraries: `npm install @phosphor-icons/react` or `yarn add @phosphor-icons/react`.",
+    "2": "Include fonts in index.css: Work Sans (Headings), IBM Plex Sans (Body), JetBrains Mono (Tickers/Data).",
+    "3": "Use Shadcn UI (Table, Dialog/Sheet, Button, Badge, Input, Select, Form, Card). Override default Shadcn styles to match the dense, dark '#0f172a' fintech aesthetic.",
+    "4": "Seed the initial table state with 8-10 mock corporate actions (AAPL, MSFT, GOOGL, AMZN, TSLA, META, NVDA, JPM). Use standard action types (Dividend, Stock Split, Merger, Rights Issue).",
+    "5": "Implement the Action Processor side panel. Submit triggers an Alpha Vantage API call to fetch the company name (`https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={TICKER}&apikey=demo`). If the API fails or is rate-limited, fallback gracefully to a mock company name to ensure the MVP works.",
+    "6": "Add the newly submitted action to the table immediately as 'Pending'.",
+    "7": "Process Button Logic: In the table row, clicking 'Process' changes the item state to 'Processing' (blue badge, pulsing). Start a 3000ms timeout, then change to 'Completed' (green badge). Make the button disabled during processing and after completion.",
+    "8": "Top Impact Summary Cards must use derived state from the table data to automatically update (Total Actions, Pending Count, Affected Securities, Avg Processing Time).",
+    "9": "Add rigorous test attributes to all elements (e.g., `data-testid=\"process-action-btn\"`, `data-testid=\"status-badge-pending\"`, `data-testid=\"action-processor-form\"`, `data-testid=\"ticker-input\"`)."
+  }
+}
