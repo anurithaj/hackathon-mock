@@ -1,52 +1,93 @@
-import { useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
+import Dashboard from "@/components/Dashboard";
+import { Toaster } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+function App() {
+  const [actions, setActions] = useState([]);
+  const [summary, setSummary] = useState({
+    total_actions: 0,
+    pending_count: 0,
+    securities_affected: 0,
+    avg_processing_time: 2.4,
+  });
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    helloWorldApi();
+  const fetchActions = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/actions`);
+      setActions(res.data);
+    } catch (e) {
+      console.error("Failed to fetch actions:", e);
+    }
   }, []);
 
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/actions/summary`);
+      setSummary(res.data);
+    } catch (e) {
+      console.error("Failed to fetch summary:", e);
+    }
+  }, []);
 
-function App() {
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([fetchActions(), fetchSummary()]);
+    setLoading(false);
+  }, [fetchActions, fetchSummary]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const addAction = async (payload) => {
+    const res = await axios.post(`${API}/actions`, payload);
+    setActions((prev) => [...prev, res.data]);
+    await fetchSummary();
+    return res.data;
+  };
+
+  const processAction = async (actionId) => {
+    await axios.put(`${API}/actions/${actionId}/process`);
+    setActions((prev) =>
+      prev.map((a) => (a.id === actionId ? { ...a, status: "Processing" } : a))
+    );
+
+    setTimeout(async () => {
+      await axios.put(`${API}/actions/${actionId}/complete`);
+      setActions((prev) =>
+        prev.map((a) =>
+          a.id === actionId ? { ...a, status: "Completed" } : a
+        )
+      );
+      await fetchSummary();
+    }, 3000);
+  };
+
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <div className="min-h-screen bg-[#0f172a]">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "#1e293b",
+            border: "1px solid #334155",
+            color: "#f8fafc",
+          },
+        }}
+      />
+      <Dashboard
+        actions={actions}
+        summary={summary}
+        loading={loading}
+        onAddAction={addAction}
+        onProcessAction={processAction}
+      />
     </div>
   );
 }
