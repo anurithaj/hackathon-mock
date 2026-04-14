@@ -1,46 +1,25 @@
 # Corporate Actions Processing System - PRD
 
 ## Problem Statement
-Build a Corporate Actions Processing System MVP with dashboard table, action processor panel, and impact summary cards. Dark fintech theme with Alpha Vantage API integration.
+Build a comprehensive Corporate Actions Processing System matching a Northern Trust CAP System reference design with 5 tabs: Dashboard, Event Queue, Entitlements, Positions, Audit Log.
 
 ## Architecture
 - **Backend**: FastAPI (Python) with in-memory storage
-- **Frontend**: React + Tailwind CSS + Shadcn UI
+- **Frontend**: React + Tailwind CSS + Shadcn UI + Phosphor Icons
 - **Database**: In-memory (no persistence)
-- **API**: Alpha Vantage (demo key) for company name enrichment
-
-## User Personas
-- Financial operations analysts processing corporate actions
-- Portfolio managers tracking dividends, splits, mergers, rights issues
-
-## Core Requirements
-- Dashboard table with 8-10 seeded corporate actions
-- Color-coded status badges (Pending/Processing/Completed)
-- Side panel form for adding new actions
-- Alpha Vantage API enrichment for ticker symbols
-- Summary metric cards (Total Actions, Pending, Securities Affected, Avg Processing Time)
-- Process button with 3-second animated workflow
+- **API**: Alpha Vantage (demo key) for company enrichment
 
 ## What's Been Implemented (Feb 2026)
-- [x] FastAPI backend with 5 endpoints (GET/POST actions, process/complete, summary)
-- [x] 10 seeded corporate actions (AAPL, MSFT, GOOGL, AMZN, TSLA, META, NVDA, JPM, BAC, DIS)
-- [x] Alpha Vantage API integration with demo key
-- [x] React frontend with dark fintech theme (#0f172a, #1e293b, #6366f1)
-- [x] Shadcn UI components (Table, Sheet, Select, Calendar, Badge, Button)
-- [x] Summary cards with reactive updates
-- [x] Process workflow animation (Pending → Processing → Completed in 3s)
-- [x] Custom fonts (Work Sans, IBM Plex Sans, JetBrains Mono)
+- [x] **Dashboard Tab**: 5 metric cards, upcoming deadlines table, event type breakdown chart, processing pipeline stepper
+- [x] **Event Queue Tab**: Search/filter/paginated table (15 events), New Event modal, Event Detail modal, Process buttons
+- [x] **Entitlements Tab**: Filter buttons (All/Pending/Elected/Mandatory), voluntary election buttons, mandatory auto-processing
+- [x] **Positions Tab**: 4 metric cards, 10 positions with risk levels, payment types, status badges
+- [x] **Audit Log Tab**: 12+ color-coded timeline entries with timestamps
+- [x] Light professional fintech theme (Northern Trust style)
+- [x] 15 seeded events, 7 entitlements, 10 positions, 12 audit entries
 - [x] All tests passing (100% backend, 100% frontend)
 
 ## Prioritized Backlog
-- P0: None (MVP complete)
-- P1: Data persistence with MongoDB, filtering/sorting on table
-- P2: Export to CSV, bulk processing, audit trail/history
-- P3: Real-time WebSocket updates, role-based access control
-
-## Next Tasks
-1. Add MongoDB persistence for corporate actions
-2. Add table sorting and filtering capabilities
-3. Add search by ticker/company name
-4. Implement proper Alpha Vantage API key (non-demo)
-5. Add authentication for production use
+- P1: MongoDB persistence, real-time WebSocket updates
+- P2: User auth, export to CSV/PDF, bulk processing
+- P3: Email notifications, regulatory compliance reports
