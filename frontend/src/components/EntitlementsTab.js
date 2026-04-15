@@ -9,13 +9,17 @@ const FILTERS = [
   { key: "mandatory", label: "Mandatory" },
 ];
 
-export default function EntitlementsTab({ data, loading, onFilter, onElect, onSubmitAll }) {
+export default function EntitlementsTab({ data: initialData, loading, onFilter, onElect, onSubmitAll, getFiltered }) {
   const [activeFilter, setActiveFilter] = useState("");
+  const [filteredData, setFilteredData] = useState(null);
+  const data = filteredData || initialData;
   const { entitlements, total } = data;
 
   const handleFilter = (key) => {
     setActiveFilter(key);
-    onFilter(key);
+    if (getFiltered) {
+      setFilteredData(getFiltered(key));
+    }
   };
 
   if (loading) {

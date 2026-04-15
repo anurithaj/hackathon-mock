@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import "@/App.css";
-import axios from "axios";
 import { Toaster, toast } from "sonner";
 import Header from "@/components/Header";
 import DashboardTab from "@/components/DashboardTab";
@@ -8,9 +7,14 @@ import EventQueueTab from "@/components/EventQueueTab";
 import EntitlementsTab from "@/components/EntitlementsTab";
 import PositionsTab from "@/components/PositionsTab";
 import AuditTab from "@/components/AuditTab";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import {
+  SEED_EVENTS,
+  SEED_ENTITLEMENTS,
+  SEED_POSITIONS,
+  SEED_AUDIT,
+  computeDashboard,
+  computePositionMetrics,
+} from "@/data/seedData";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
@@ -20,92 +24,116 @@ const TABS = [
   { id: "audit", label: "Audit Log" },
 ];
 
+let nextEvtNum = SEED_EVENTS.length + 1;
+
+function uid() {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [dashboard, setDashboard] = useState(null);
-  const [events, setEvents] = useState({ events: [], total: 0, page: 1, total_pages: 1 });
-  const [entitlements, setEntitlements] = useState({ entitlements: [], total: 0 });
-  const [positions, setPositions] = useState({ positions: [], metrics: {} });
-  const [audit, setAudit] = useState({ entries: [] });
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([...SEED_EVENTS]);
+  const [entitlements, setEntitlements] = useState([...SEED_ENTITLEMENTS]);
+  const [positions] = useState([...SEED_POSITIONS]);
+  const [auditLog, setAuditLog] = useState([...SEED_AUDIT]);
 
-  const fetchDashboard = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/dashboard`);
-      setDashboard(res.data);
-    } catch (e) { console.error(e); }
+  // ─── Derived state ───
+  const dashboard = computeDashboard(events, entitlements);
+  const posMetrics = computePositionMetrics(positions);
+
+  const addAudit = useCallback((action, logType = "system", color = "gray") => {
+    setAuditLog(prev => [
+      { id: `AUD-${uid()}`, action, timestamp: new Date().toISOString(), log_type: logType, color },
+      ...prev,
+    ]);
   }, []);
 
-  const fetchEvents = useCallback(async (params = {}) => {
-    try {
-      const res = await axios.get(`${API}/events`, { params });
-      setEvents(res.data);
-    } catch (e) { console.error(e); }
-  }, []);
-
-  const fetchEntitlements = useCallback(async (filter = "") => {
-    try {
-      const res = await axios.get(`${API}/entitlements`, { params: { filter_type: filter } });
-      setEntitlements(res.data);
-    } catch (e) { console.error(e); }
-  }, []);
-
-  const fetchPositions = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/positions`);
-      setPositions(res.data);
-    } catch (e) { console.error(e); }
-  }, []);
-
-  const fetchAudit = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/audit`);
-      setAudit(res.data);
-    } catch (e) { console.error(e); }
-  }, []);
-
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      await Promise.all([fetchDashboard(), fetchEvents(), fetchEntitlements(), fetchPositions(), fetchAudit()]);
-      setLoading(false);
+  // ─── Event Queue helpers ───
+  const getFilteredEvents = useCallback((params = {}) => {
+    let filtered = [...events];
+    const { search = "", event_type = "", status = "", page = 1, per_page = 10 } = params;
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(e =>
+        e.security.toLowerCase().includes(s) ||
+        e.isin.toLowerCase().includes(s) ||
+        e.id.toLowerCase().includes(s) ||
+        e.ticker.toLowerCase().includes(s)
+      );
+    }
+    if (event_type) filtered = filtered.filter(e => e.event_type === event_type);
+    if (status) filtered = filtered.filter(e => e.status === status);
+    const total = filtered.length;
+    const start = (page - 1) * per_page;
+    return {
+      events: filtered.slice(start, start + per_page),
+      total,
+      page,
+      per_page,
+      total_pages: Math.ceil(total / per_page) || 1,
     };
-    init();
-  }, [fetchDashboard, fetchEvents, fetchEntitlements, fetchPositions, fetchAudit]);
+  }, [events]);
 
-  const createEvent = async (payload) => {
-    const res = await axios.post(`${API}/events`, payload);
-    toast.success(`Event ${res.data.id} created`);
-    await Promise.all([fetchEvents(), fetchDashboard(), fetchAudit()]);
-    return res.data;
-  };
+  const createEvent = useCallback((payload) => {
+    const evtId = `EVT-${String(nextEvtNum++).padStart(3, "0")}`;
+    const impact = +(Math.random() * 12 + 0.3).toFixed(2);
+    const newEvt = {
+      id: evtId,
+      security: payload.security,
+      ticker: "",
+      isin: payload.isin || "",
+      event_type: payload.event_type,
+      distribution: payload.distribution || "",
+      record_date: payload.record_date,
+      pay_date: payload.pay_date,
+      status: "Announced",
+      mandatory: payload.mandatory ?? true,
+      notes: payload.notes || "",
+      impact_pct: impact,
+      created_at: new Date().toISOString(),
+    };
+    setEvents(prev => [...prev, newEvt]);
+    addAudit(`${evtId} ${payload.security} ${payload.event_type} created`, "event", "blue");
+    toast.success(`Event ${evtId} created`);
+    return newEvt;
+  }, [addAudit]);
 
-  const processEvent = async (eventId) => {
-    const res = await axios.put(`${API}/events/${eventId}/process`);
-    toast.success(`${eventId} moved to ${res.data.status}`);
-    await Promise.all([fetchEvents(), fetchDashboard(), fetchAudit()]);
-    return res.data;
-  };
+  const processEvent = useCallback((eventId) => {
+    const flow = ["Announced", "Pending", "Validated", "Instructed", "Settled"];
+    setEvents(prev => prev.map(e => {
+      if (e.id !== eventId) return e;
+      if (e.status === "Settled") return e;
+      const idx = flow.indexOf(e.status);
+      const next = idx >= 0 ? flow[Math.min(idx + 1, flow.length - 1)] : "Validated";
+      addAudit(`${eventId} ${e.security} moved to ${next}`, "event", next === "Settled" ? "green" : "amber");
+      toast.success(`${eventId} moved to ${next}`);
+      return { ...e, status: next };
+    }));
+  }, [addAudit]);
 
-  const electEntitlement = async (entId, option) => {
-    await axios.put(`${API}/entitlements/${entId}/elect`, { elected_option: option });
-    toast.success(`Election submitted: ${option}`);
-    await Promise.all([fetchEntitlements(), fetchAudit()]);
-  };
+  // ─── Entitlements helpers ───
+  const getFilteredEntitlements = useCallback((filterType = "") => {
+    let filtered = [...entitlements];
+    if (filterType === "pending") filtered = filtered.filter(e => e.status === "Pending election");
+    else if (filterType === "elected") filtered = filtered.filter(e => e.status === "Elected");
+    else if (filterType === "mandatory") filtered = filtered.filter(e => e.mandatory);
+    return { entitlements: filtered, total: filtered.length };
+  }, [entitlements]);
 
-  const submitAllElections = async () => {
-    const res = await axios.post(`${API}/entitlements/submit-all`);
-    toast.success(`${res.data.submitted} elections submitted`);
-    await fetchAudit();
-  };
+  const electEntitlement = useCallback((entId, option) => {
+    setEntitlements(prev => prev.map(ent => {
+      if (ent.id !== entId) return ent;
+      addAudit(`${entId} ${ent.security} election: ${option}`, "user", "blue");
+      toast.success(`Election submitted: ${option}`);
+      return { ...ent, elected_option: option, status: "Elected" };
+    }));
+  }, [addAudit]);
 
-  const refreshTab = async () => {
-    if (activeTab === "dashboard") await fetchDashboard();
-    if (activeTab === "events") await fetchEvents();
-    if (activeTab === "entitlements") await fetchEntitlements();
-    if (activeTab === "positions") await fetchPositions();
-    if (activeTab === "audit") await fetchAudit();
-  };
+  const submitAllElections = useCallback(() => {
+    const count = entitlements.filter(e => e.status === "Elected").length;
+    addAudit(`Bulk submission: ${count} elections submitted for processing`, "user", "green");
+    toast.success(`${count} elections submitted`);
+  }, [entitlements, addAudit]);
 
   return (
     <div className="min-h-screen bg-[#F7F7F9]">
@@ -119,7 +147,7 @@ function App() {
             <button
               key={tab.id}
               data-testid={`tab-${tab.id}`}
-              onClick={() => { setActiveTab(tab.id); }}
+              onClick={() => setActiveTab(tab.id)}
               className={`tab-btn px-5 py-3.5 text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? "active text-[#002FA7]"
@@ -135,31 +163,36 @@ function App() {
       {/* Tab Content */}
       <main className="max-w-[1440px] mx-auto px-6 md:px-8 py-6">
         {activeTab === "dashboard" && (
-          <DashboardTab data={dashboard} loading={loading} />
+          <DashboardTab data={dashboard} loading={false} />
         )}
         {activeTab === "events" && (
           <EventQueueTab
-            data={events}
-            loading={loading}
-            onSearch={fetchEvents}
+            data={getFilteredEvents()}
+            loading={false}
+            onSearch={(params) => getFilteredEvents(params)}
             onCreate={createEvent}
             onProcess={processEvent}
+            getFiltered={getFilteredEvents}
           />
         )}
         {activeTab === "entitlements" && (
           <EntitlementsTab
-            data={entitlements}
-            loading={loading}
-            onFilter={fetchEntitlements}
+            data={getFilteredEntitlements()}
+            loading={false}
+            onFilter={(f) => getFilteredEntitlements(f)}
             onElect={electEntitlement}
             onSubmitAll={submitAllElections}
+            getFiltered={getFilteredEntitlements}
           />
         )}
         {activeTab === "positions" && (
-          <PositionsTab data={positions} loading={loading} />
+          <PositionsTab
+            data={{ positions, metrics: posMetrics }}
+            loading={false}
+          />
         )}
         {activeTab === "audit" && (
-          <AuditTab data={audit} loading={loading} />
+          <AuditTab data={{ entries: auditLog }} loading={false} />
         )}
       </main>
     </div>

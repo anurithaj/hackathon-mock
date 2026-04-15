@@ -46,10 +46,11 @@ const TYPE_COLORS = {
   "Tender Offer": "#4F46E5",
 };
 
-export default function EventQueueTab({ data, loading, onSearch, onCreate, onProcess }) {
+export default function EventQueueTab({ data: initialData, loading, onSearch, onCreate, onProcess, getFiltered }) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [filteredData, setFilteredData] = useState(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -59,13 +60,18 @@ export default function EventQueueTab({ data, loading, onSearch, onCreate, onPro
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const data = filteredData || initialData;
+
   const doSearch = (params = {}) => {
-    onSearch({
-      search: params.search ?? search,
-      event_type: params.event_type ?? typeFilter,
-      status: params.status ?? statusFilter,
-      page: params.page ?? 1,
-    });
+    if (getFiltered) {
+      const result = getFiltered({
+        search: params.search ?? search,
+        event_type: params.event_type ?? typeFilter,
+        status: params.status ?? statusFilter,
+        page: params.page ?? 1,
+      });
+      setFilteredData(result);
+    }
   };
 
   const handleCreate = async (e) => {
@@ -76,9 +82,10 @@ export default function EventQueueTab({ data, loading, onSearch, onCreate, onPro
     }
     setSubmitting(true);
     try {
-      await onCreate(formData);
+      onCreate(formData);
       setFormData({ security: "", isin: "", event_type: "", mandatory: true, record_date: "", pay_date: "", distribution: "", notes: "" });
       setShowNewModal(false);
+      setFilteredData(null);
     } catch (err) {
       toast.error("Failed to create event");
     } finally {
