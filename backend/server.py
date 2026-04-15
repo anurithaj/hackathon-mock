@@ -280,3 +280,14 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown():
     pass
+
+
+{
+    "name":"hackathon-mock",
+    "version":"1.0.0",
+    "scripts":{
+        "dev":"vite",
+        "build":"vite build",
+        "preview":"vite preview"
+    }
+}
